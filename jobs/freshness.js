@@ -111,11 +111,11 @@ export async function runFreshness({ count = 3, minImp = 1 } = {}) {
       try {
         const cands = await gscFreshnessCandidates(token, t, minImp);
         log.push(`${t.host}: ${cands.length} candidates(>90d+imp)`);
-        for (const c of cands.slice(0, count)) {
-          const r = await queueFreshnessDraft({ domain: t.domain, slug: c.slug, title: c.title, lang: t.lang, useAi: true });
-          if (r.ok) { queued++; log.push(`queued ${r.slug} ai=${r.model || 'template'}`); }
-          await sleep(2000);
-        }
+      for (const c of cands.slice(0, count)) {
+        const r = await queueFreshnessDraft({ domain: t.domain, slug: c.slug, title: c.title, lang: t.lang, useAi: true });
+        if (r.ok) { queued++; log.push(`queued ${r.slug} (imp=${c.impressions}) ai=${r.model || 'template'}`); }
+        await sleep(8000); // Groq free rate-limit aman
+      }
       } catch (e) { log.push(`${t.host} error: ${String(e).slice(0, 100)}`); }
     }
     await jobEnd(id, 'ok', log.join(' | '));
@@ -146,7 +146,9 @@ async function gscAccessToken(sa) {
 
 // Kandidat: halaman /blog/ ber-impresi (GSC 90 hari) + lastmod sitemap >90 hari.
 async function gscFreshnessCandidates(token, t, minImp) {
-  const end = new Date(), start = new Date(Date.now() - 90 * 864e5);
+  // Window 90 hari tidak cukup untuk GSC data www (terbukti kosong 2026-06-30→09-14).
+  // Pakai 6-bulan untuk hasil riil; cooldown 30 hari di queueFreshnessDraft mencegah spam.
+  const end = new Date(), start = new Date(Date.now() - 180 * 864e5);
   const fmt = (d) => d.toISOString().slice(0, 10);
   const r = await fetch(
     `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(t.siteUrl)}/searchAnalytics/query`, {
