@@ -78,6 +78,9 @@ function clientIp(c) {
 }
 function ipAllowed(ip) {
   if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return true;
+  // RFC1918: Docker bridge/gateway IPs (host-originated traffic incl. orchestrator
+  // healthchecks). Token auth tetap wajib untuk semua endpoint kecuali /v1/health.
+  if (ipInCidr(ip, '10.0.0.0/8') || ipInCidr(ip, '172.16.0.0/12') || ipInCidr(ip, '192.168.0.0/16')) return true;
   return cfList.some(cidr => ipInCidr(ip, cidr));
 }
 
