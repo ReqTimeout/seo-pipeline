@@ -86,7 +86,7 @@ function parseSaJson() {
   } catch { return null; }
 }
 
-export async function runFreshness({ count = 3, minImp = 10 } = {}) {
+export async function runFreshness({ count = 3, minImp = 1 } = {}) {
   const id = await jobStart('freshness');
   const log = [];
   try {
