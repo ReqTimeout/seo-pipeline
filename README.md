@@ -10,3 +10,5 @@ Internal service for beriklan.co.id / beriklan.my SEO automation (Coolify-deploy
 - `db/schema.sql` — Postgres schemas (comy/coid/shared).
 
 Docs: `plan.md` + `SEO-INDEX-LLM-BLUEPRINT.md` in beriklan.co.id repo (private).
+
+<!-- deploy probe 07:15 -->
