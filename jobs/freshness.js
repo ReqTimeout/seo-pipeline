@@ -55,17 +55,22 @@ async function callAi(systemPrompt, userPrompt) {
     }
   }
   if (groqKeys.length) {
-    try {
-      const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${groqKeys[0]}` },
-        body: JSON.stringify({ model: 'openai/gpt-oss-20b', reasoning_effort: 'low', max_tokens: 1024, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
-      });
-      if (r.ok) {
-        const j = await r.json();
-        const t = (j.choices?.[0]?.message?.content || '').trim();
-        if (t.length > 50) return t;
+    // Semua model free Groq (verifikasi key live 15 Sep 2026).
+    for (const gm of ['openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b']) {
+      for (const gk of groqKeys) {
+        try {
+          const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${gk}` },
+            body: JSON.stringify({ model: gm, reasoning_effort: 'low', max_tokens: 1024, messages: [{ role: 'user', content: systemPrompt + '\n\n' + userPrompt }] }),
+          });
+          if (r.ok) {
+            const j = await r.json();
+            const t = ((j.choices?.[0]?.message?.content) || '').trim();
+            if (t.length > 50) return { text: t, model: 'groq/' + gm };
+          }
+        } catch {}
       }
-    } catch {}
+    }
   }
   return null;
 }
