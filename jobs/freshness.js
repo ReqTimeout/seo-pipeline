@@ -150,8 +150,11 @@ async function gscFreshnessCandidates(token, t, minImp) {
   // Pakai 6-bulan untuk hasil riil; cooldown 30 hari di queueFreshnessDraft mencegah spam.
   const end = new Date(), start = new Date(Date.now() - 180 * 864e5);
   const fmt = (d) => d.toISOString().slice(0, 10);
+  const siteUrl = (t.siteUrl || '').startsWith('sc-domain:')
+    ? t.siteUrl
+    : (t.siteUrl.endsWith('/') ? t.siteUrl : t.siteUrl + '/');
   const r = await fetch(
-    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(t.siteUrl)}/searchAnalytics/query`, {
+    `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ startDate: fmt(start), endDate: fmt(end), dimensions: ['page'], rowLimit: 5000, type: 'web' }),
   });
