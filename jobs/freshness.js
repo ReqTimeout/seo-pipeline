@@ -6,9 +6,12 @@
 import { pool, jobStart, jobEnd, fetchText, parseSitemapUrls, sleep } from './lib.js';
 import { createSign } from 'crypto';
 
-// Model FREE Zen — mirror edge worker ZEN_FREE_MODELS (verifikasi 2026-08-30).
+// Model FREE Zen — mirror docs resmi opencode.ai/docs/zen (verifikasi 15 Sep 2026).
+// 5 via chat/completions + 1 via responses API (muse-spark contributor).
 const ZEN_FREE_MODELS = ['big-pickle', 'mimo-v2.5-free', 'ling-3.0-flash-fin-free', 'nemotron-3.5-lightning-free', 'nemotron-3-ultra-free'];
 const ZEN_ENDPOINT = 'https://opencode.ai/zen/v1/chat/completions';
+const ZEN_RESPONSES_ENDPOINT = 'https://opencode.ai/zen/v1/responses';
+const ZEN_FREE_RESPONSES_MODELS = ['muse-spark-1.3-contributor-free'];
 
 export function buildFreshnessCallout({ title, lang = 'id', year = new Date().getFullYear() }) {
   const t = (title || 'artikel ini').slice(0, 90);
@@ -32,6 +35,20 @@ async function callAi(systemPrompt, userPrompt) {
         if (r.ok) {
           const j = await r.json();
           const t = ((j.choices?.[0]?.message?.content) || '').trim();
+          if (t.length > 50) return { text: t, model: 'zen/' + m };
+        }
+      } catch {}
+    }
+    for (const m of ZEN_FREE_RESPONSES_MODELS) {
+      try {
+        const r = await fetch(ZEN_RESPONSES_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${zenKey}`, 'User-Agent': 'BeriklanPipeline/1.0' },
+          body: JSON.stringify({ model: m, input: systemPrompt + '\n\n' + userPrompt, max_output_tokens: 800 }),
+        });
+        if (r.ok) {
+          const j = await r.json();
+          const t = (j.output || []).flatMap(o => o.content || []).map(c => c.text || '').join('').trim();
           if (t.length > 50) return { text: t, model: 'zen/' + m };
         }
       } catch {}
