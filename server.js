@@ -116,6 +116,8 @@ app.use('/v1/*', async (c, next) => {
 });
 
 app.get('/v1/health', (c) => c.json({ ok: true, service: 'seo-pipeline', version: VERSION, time: new Date().toISOString() }));
+// Root health (Coolify/orchestrator healthcheck hits / and expects 200).
+app.get('/', (c) => c.json({ ok: true, service: 'seo-pipeline', version: VERSION }));
 
 const DOMAINS = { comy: 'comy', coid: 'coid' };
 
