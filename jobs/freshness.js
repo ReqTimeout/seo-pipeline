@@ -162,26 +162,30 @@ async function gscFreshnessCandidates(token, t, minImp) {
     .map(x => ({ url: x.keys[0], impressions: x.impressions }))
     .sort((a, b) => b.impressions - a.impressions)
     .slice(0, 60);
-  // Umur via sitemap-blog.xml lastmod
+  // Umur via sitemap-blog.xml lastmod. Normalisasi: trim trailing slash + buang
+  // 'www.' (GSC www → sitemap apex, beda hostname di site config CF).
   let lastmod = {};
   try {
     const sm = await fetchText(`https://${t.host}/sitemap-blog.xml`);
     if (sm.status === 200) {
       for (const u of parseSitemapUrls(sm.text)) {
-        if (u.loc && u.lastmod) lastmod[u.loc.replace(/\/$/, '')] = u.lastmod;
+        if (!u.loc || !u.lastmod) continue;
+        const norm = u.loc.replace(/^https?:\/\/www\./, 'https://').replace(/\/$/, '');
+        lastmod[norm] = u.lastmod;
       }
     }
   } catch {}
   const cutoff = Date.now() - 90 * 864e5;
   const out = [];
   for (const p of pages) {
-    const lm = lastmod[p.url.replace(/\/$/, '')];
+    const norm = p.url.replace(/^https?:\/\/www\./, 'https://').replace(/\/$/, '');
+    const lm = lastmod[norm];
     const tlm = lm ? Date.parse(lm) : NaN;
     if (isNaN(tlm)) continue; // umur tak terverifikasi → skip (jujur)
     if (tlm > cutoff) continue;
-    const mslug = p.url.match(/\/blog\/([^\/]+)\/?$/);
+    const mslug = norm.match(/\/blog\/([^\/]+)\/?$/);
     if (!mslug) continue;
-    out.push({ slug: mslug[1], title: mslug[1].replace(/-/g, ' '), url: p.url, impressions: p.impressions });
+    out.push({ slug: mslug[1], title: mslug[1].replace(/-/g, ' '), url: p.url, impressions: p.impressions, lastmod: lm });
   }
   if (!out.length) return out;
   // Skip yang sudah pernah diantre (semua status) — anti duplikat harian
