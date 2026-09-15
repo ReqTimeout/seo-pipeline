@@ -53,13 +53,23 @@ async function callAi(systemPrompt, userPrompt) {
   return null;
 }
 
+function parseSaJson() {
+  const raw = (process.env.GSC_SA_JSON || '').trim();
+  if (!raw) return null;
+  try {
+    // Auto-detect: raw JSON (diawali '{') atau base64 (single-line, aman untuk .env).
+    const txt = raw.startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8');
+    const sa = JSON.parse(txt);
+    return sa?.client_email && sa?.private_key ? sa : null;
+  } catch { return null; }
+}
+
 export async function runFreshness({ count = 3, minImp = 10 } = {}) {
   const id = await jobStart('freshness');
   const log = [];
   try {
-    let sa = null;
-    try { sa = JSON.parse(process.env.GSC_SA_JSON || 'null'); } catch {}
-    if (!sa?.client_email || !sa?.private_key) {
+    const sa = parseSaJson();
+    if (!sa) {
       log.push('skipped: need GSC_SA_JSON (candidate source)');
       await jobEnd(id, 'ok', log.join(' | '));
       return { ok: true, skipped: true, log };
